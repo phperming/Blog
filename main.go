@@ -33,5 +33,14 @@ func main()  {
 		fmt.Fprint(w,"文章 ID:" + id)
 	})
 
+	router.HandleFunc("/articles", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			fmt.Fprint(w,"文章列表")
+		case "POST":
+			fmt.Fprint(w,"创建新的文章")
+
+		}
+	})
 	http.ListenAndServe(":8088",router)
 }

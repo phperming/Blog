@@ -1,26 +1,28 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"html/template"
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
-	"database/sql"
 )
 
 var router = mux.NewRouter()
 var db  *sql.DB
 
+
 func initDB()  {
 	var err error
 	config := mysql.Config{
+
 		User : "root",
 		Passwd : "root",
 		Addr: "127.0.0.1:3306",
@@ -30,7 +32,8 @@ func initDB()  {
 	}
 
 	//准备数据库连接池
-	db,err := sql.Open("mysql",config.FormatDSN())
+	db,err = sql.Open("mysql",config.FormatDSN())
+
 	checkError(err)
 	//设置最大连接数
 	db.SetMaxOpenConns(25)
@@ -41,6 +44,7 @@ func initDB()  {
 
 	//尝试连接，失败会报错
 	err = db.Ping()
+
 	checkError(err)
 }
 
@@ -55,7 +59,8 @@ func createTables()  {
 		id bigint(20) PRIMARY KEY AUTO_INCREMENT NOT NULL,
 		title varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
 		body longtext COLLATE utf8mb4_unicode_ci
-	);`
+	);
+	`
 
 	_, err := db.Exec(createArticlesSQL)
 	checkError(err)
@@ -67,6 +72,12 @@ type ArticlesFormData struct {
 	Body string
 	URL *url.URL
 	Errors map[string]string
+}
+
+type Article struct {
+	Title string
+	Body string
+	ID int64
 }
 
 func homeHandler(w http.ResponseWriter,r *http.Request)  {
@@ -84,9 +95,32 @@ func aboutHandler(w http.ResponseWriter,r *http.Request)  {
 }
 
 func articlesShowHandler(w http.ResponseWriter,r *http.Request)  {
+	//获取URL参数
 	vars := mux.Vars(r)
 	id := vars["id"]
-	fmt.Fprint(w,"文章 ID:" + id)
+
+	//读取对应的文章数据
+	article := Article{}
+	query := "SELECT * FROM articles WHERE id=?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			//数据未找到
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w,"404,文章未找到")
+		} else {
+			//数据库错误
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w,"500,内部服务器错误")
+		}
+	} else {
+		//文章读取成功，显示文章
+		tmpl, err := template.ParseFiles("resource/views/articles/show.gohtml")
+		checkError(err)
+		tmpl.Execute(w,article)
+	}
+
 }
 
 func articlesIndexHandler(w http.ResponseWriter,r *http.Request)  {
@@ -115,11 +149,14 @@ func articlesStoreHandler(w http.ResponseWriter,r *http.Request) {
 	
 	//检查是否有错误
 	if len(errors) == 0 {
-		fmt.Fprint(w,"验证通过！<br/>")
-		fmt.Fprintf(w,"title的值为：%v <br/>",title)
-		fmt.Fprintf(w,"title的长度为：%d <br/>",len(title))
-		fmt.Fprintf(w,"body的值为：%v <br/>",body)
-		fmt.Fprintf(w,"body的长度为：%d ",len(body))
+		lastInsertId,err := saveArticleToDB(title,body)
+		if lastInsertId > 0 {
+			fmt.Println("出插入成功，ID为"+strconv.FormatInt(lastInsertId,10))
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w,"500 服务器内部错误")
+		}
 	} else {
 		storeURL ,_ := router.Get("articles.store").URL()
 		data := ArticlesFormData{
@@ -136,6 +173,40 @@ func articlesStoreHandler(w http.ResponseWriter,r *http.Request) {
 		tmpl.Execute(w,data)
 	}
 	
+}
+
+func saveArticleToDB(title string,body string)(int64,error) {
+	//变量初始化
+	var (
+		id int64
+		err error
+		rs sql.Result
+		stmt *sql.Stmt
+	)
+
+	//1.获取一个prepare声明语句
+	stmt, err = db.Prepare("INSERT INTO articles (title,body) VALUES (?,?)")
+	//例行的错误检测
+	if err != nil {
+		return 0,err
+	}
+
+	//在此函数运行结束后关闭此语句，防止占用SQL连接
+	defer stmt.Close()
+
+	//执行请求，传参进入绑定内容
+	rs, err = stmt.Exec(title, body)
+	if err != nil {
+		return  0,err
+	}
+
+	//成功的话会返回自增I
+	if id,err = rs.LastInsertId(); id > 0 {
+		return id,nil
+	}
+
+	return 0,err
+
 }
 
 func forceHTMLMiddleware(next http.Handler)http.Handler  {

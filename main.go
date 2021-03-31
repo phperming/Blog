@@ -96,13 +96,10 @@ func aboutHandler(w http.ResponseWriter,r *http.Request)  {
 
 func articlesShowHandler(w http.ResponseWriter,r *http.Request)  {
 	//获取URL参数
-	vars := mux.Vars(r)
-	id := vars["id"]
+	id := getRouterVariable("id",r)
 
 	//读取对应的文章数据
-	article := Article{}
-	query := "SELECT * FROM articles WHERE id=?"
-	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	article,err := getArticleById(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			//数据未找到
@@ -131,22 +128,7 @@ func articlesStoreHandler(w http.ResponseWriter,r *http.Request) {
 	title := r.PostFormValue("title")
 	body := r.PostFormValue("body")
 
-	errors := make(map[string]string)
-
-	//验证title
-	if title == "" {
-		errors["title"] = "标题不能为空"
-	} else if utf8.RuneCountInString(title) < 3 || utf8.RuneCountInString(title) > 40 {
-		errors["title"] = "标题长度需介于3-30"
-	}
-
-	//验证内容
-	if body == "" {
-		errors["body"] = "内容不能为空"
-	} else if utf8.RuneCountInString(body) < 10 {
-		errors["body"] = "内容长度需大于或等于10"
-	}
-	
+	errors := validateArticleFormData(title,body)
 	//检查是否有错误
 	if len(errors) == 0 {
 		lastInsertId,err := saveArticleToDB(title,body)
@@ -230,6 +212,38 @@ func removeTrailingSlash(next http.Handler) http.Handler {
 	})
 }
 
+func getRouterVariable(parameter string,r *http.Request)  string {
+	vars := mux.Vars(r)
+	return vars[parameter]
+}
+
+func getArticleById(id string)(Article,error)  {
+	article := Article{}
+	query := "SELECT * FROM articles where id=?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	return article,err
+}
+
+func validateArticleFormData(title string,body string) map[string]string {
+	errors := make(map[string]string)
+
+	//验证标题
+	if title == "" {
+		errors["title"] = "标题不能为空"
+	} else if utf8.RuneCountInString(title) < 3 || utf8.RuneCountInString(title) > 40 {
+		errors["title"] = "标题长度需介于3-40之间"
+	}
+
+	//验证内容
+	if body == "" {
+		errors["body"] = "内容不能为空"
+	} else if utf8.RuneCountInString(body) < 10 {
+		errors["body"] = "内容长度不能小于10"
+	}
+
+	return errors
+}
+
 func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 	storeURL ,_:= router.Get("articles.store").URL()
 	data := ArticlesFormData{
@@ -245,6 +259,103 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w,data)
 }
 
+func articlesEditHandler(w http.ResponseWriter,r *http.Request) {
+	//获取URL参数
+	id := getRouterVariable("id",r)
+
+	//读取对应的文章数据
+	article,err := getArticleById(id)
+	
+	//如果出现错误
+	if err != nil {
+		if err == sql.ErrNoRows {
+			//数据未找到
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w,"404文章未找到")
+		} else {
+			//数据库错误
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w,"500 服务器内部错误")
+		}
+	} else {
+		//读取成功，显示表单
+		fmt.Println("读取成功")
+		updateURL,_ := router.Get("articles.update").URL("id",id)
+		data := ArticlesFormData{
+			Title: article.Title,
+			Body: article.Body,
+			URL: updateURL,
+			Errors: nil,
+		}
+		tmpl,err := template.ParseFiles("resource/views/articles/edit.gohtml")
+		checkError(err)
+		tmpl.Execute(w,data)
+	}
+
+}
+
+func articlesUpdateHandler(w http.ResponseWriter,r *http.Request) {
+	//获取文章ID
+	id := getRouterVariable("id",r)
+
+	//获取文章
+	_,err := getArticleById(id)
+
+	//如果出现错误
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w,"404 文章未找到")
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w,"500 服务器内部错误")
+		}
+	} else {
+		//未出现错误
+		//验证表单
+		title := r.PostFormValue("title")
+		body := r.PostFormValue("body")
+
+		errors := validateArticleFormData(title,body)
+
+		if len(errors) == 0 {
+			//验证通过
+			query := "UPDATE articles SET title=?,body=? WHERE id=?"
+			rs, err := db.Exec(query, title, body, id)
+
+			if err != nil {
+				checkError(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w,"500 服务器内部错误")
+			}
+
+			//更新成功，跳转到文章详情页
+			if n,_ := rs.RowsAffected();n > 0 {
+				showUrl ,_ := router.Get("articles.show").URL("id",id)
+				http.Redirect(w,r,showUrl.String(),http.StatusFound)
+			} else  {
+				fmt.Fprint(w,"没有做任何更改")
+			}
+		} else {
+			//表单验证不通过显示理由
+
+			updateURL,_ := router.Get("articles.update").URL("id",id)
+			data := ArticlesFormData{
+				Title: title,
+				Body: body,
+				URL: updateURL,
+				Errors: errors,
+			}
+
+			tmpl ,err := template.ParseFiles("resource/views/articles/edit.gohtml")
+
+			checkError(err)
+			tmpl.Execute(w,data)
+		}
+
+	}
+}
 
 func main()  {
 	initDB()
@@ -256,7 +367,8 @@ func main()  {
 	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 	router.HandleFunc("/articles",articlesStoreHandler).Methods("POST").Name("articles.store")
 	router.HandleFunc("/articles/create",articlesCreateHandler).Methods("GET").Name("articles.create")
-
+	router.HandleFunc("/articles/{id:[0-9]+}/edit",articlesEditHandler).Methods("GET").Name("edit")
+	router.HandleFunc("/articles/{id:[0-9]+}",articlesUpdateHandler).Methods("POST").Name("articles.update")
 
 	//自定义404页面
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)

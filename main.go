@@ -80,6 +80,16 @@ type Article struct {
 	ID int64
 }
 
+func (a Article)Link() string {
+	showURL, err := router.Get("articles.show").URL("id", strconv.FormatInt(a.ID,10))
+	if err != nil {
+		checkError(err)
+		return ""
+	}
+	return showURL.String()
+
+}
+
 func homeHandler(w http.ResponseWriter,r *http.Request)  {
 	fmt.Fprint(w,"<h1>Hello,欢迎来到GoBlog!</h1>")
 }
@@ -120,8 +130,32 @@ func articlesShowHandler(w http.ResponseWriter,r *http.Request)  {
 
 }
 
-func articlesIndexHandler(w http.ResponseWriter,r *http.Request)  {
-	fmt.Fprint(w,"访问文章列表")
+func articlesIndexHandler(w http.ResponseWriter,r *http.Request) {
+	//执行查询语句发布会一个结果集
+	rows, err := db.Query("SELECT * FROM articles")
+	checkError(err)
+	defer rows.Close()
+
+	var articles []Article
+
+	//循环读取结果
+	for rows.Next() {
+		var article Article
+		err := rows.Scan(&article.ID, &article.Title, &article.Body)
+		checkError(err)
+		//将article添加到articles中
+		articles = append(articles, article)
+	}
+
+	//检查遍历时是否发生错误
+	err = rows.Err()
+	checkError(err)
+
+	//加载模板
+	tmpl, err := template.ParseFiles("resource/views/articles/index.gohtml")
+	checkError(err)
+
+	tmpl.Execute(w,articles)
 }
 
 func articlesStoreHandler(w http.ResponseWriter,r *http.Request) {
@@ -134,6 +168,8 @@ func articlesStoreHandler(w http.ResponseWriter,r *http.Request) {
 		lastInsertId,err := saveArticleToDB(title,body)
 		if lastInsertId > 0 {
 			fmt.Println("出插入成功，ID为"+strconv.FormatInt(lastInsertId,10))
+			showUrl ,_:= router.Get("articles.index").URL()
+			http.Redirect(w,r,showUrl.String(),http.StatusFound)
 		} else {
 			checkError(err)
 			w.WriteHeader(http.StatusInternalServerError)

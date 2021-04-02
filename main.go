@@ -1,10 +1,10 @@
 package main
 
 import (
+	"Blog/bootstrap"
 	"Blog/pkg/database"
 	"Blog/pkg/logger"
 	"Blog/pkg/route"
-	"Blog/pkg/types"
 	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -56,49 +56,6 @@ func (a Article)Delete() (rowsAffected int64,err error)  {
 	return 0,nil
 }
 
-func homeHandler(w http.ResponseWriter,r *http.Request)  {
-	fmt.Fprint(w,"<h1>Hello,欢迎来到GoBlog!</h1>")
-}
-
-func notFoundHandler(w http.ResponseWriter,r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprint(w,"<h1>您要访问的页面不存在:(</h1> <p> 如有疑惑请联系我们</p>")
-
-}
-
-func aboutHandler(w http.ResponseWriter,r *http.Request)  {
-	fmt.Fprint(w,"此博客是用来记录变成笔记，如有反馈和建议请联系<a href=\"mailto:michel@163.com\">Michel@163.com</a>")
-}
-
-func articlesShowHandler(w http.ResponseWriter,r *http.Request)  {
-	//获取URL参数
-	id := route.GetRouterVariable("id",r)
-
-	//读取对应的文章数据
-	article,err := getArticleById(id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			//数据未找到
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w,"404,文章未找到")
-		} else {
-			//数据库错误
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w,"500,内部服务器错误")
-		}
-	} else {
-		//文章读取成功，显示文章
-		tmpl,err := template.New("show.gohtml").Funcs(template.FuncMap{
-			"RouteName2URL" : route.Name2URL,
-			"Int64ToString" : types.Int64ToString,
-		}).ParseFiles("resource/views/articles/show.gohtml")
-		//tmpl, err := template.ParseFiles("resource/views/articles/show.gohtml")
-		logger.LogError(err)
-		tmpl.Execute(w,article)
-	}
-
-}
 
 func articlesIndexHandler(w http.ResponseWriter,r *http.Request) {
 	//执行查询语句发布会一个结果集
@@ -401,9 +358,9 @@ func articlesDeleteHandler(w http.ResponseWriter,r *http.Request) {
 func main()  {
 	database.Initialize()
 	db = database.DB
-	route.Initialize()
-	router = route.Router
-	router.HandleFunc("/articles/{id:[0-9]+}", articlesShowHandler).Methods("GET").Name("articles.show")
+
+	bootstrap.SetupDB()
+	router =  bootstrap.SetupRoute()
 
 	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 	router.HandleFunc("/articles",articlesStoreHandler).Methods("POST").Name("articles.store")

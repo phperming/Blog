@@ -1,17 +1,12 @@
 package route
 
 import (
-	"Blog/routes"
 	"github.com/gorilla/mux"
 	"net/http"
 )
 
 var Router  *mux.Router
 
-func Initialize()  {
-	Router = mux.NewRouter()
-	routes.RegisterWebRoutes(Router)
-}
 
 func Name2URL(routeName string,paris ...string) string{
 	url, err := Router.Get(routeName).URL(paris...)

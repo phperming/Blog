@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
-	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -137,105 +136,6 @@ func validateArticleFormData(title string,body string) map[string]string {
 }
 
 
-
-func articlesEditHandler(w http.ResponseWriter,r *http.Request) {
-	//获取URL参数
-	id := route.GetRouterVariable("id",r)
-
-	//读取对应的文章数据
-	article,err := getArticleById(id)
-	
-	//如果出现错误
-	if err != nil {
-		if err == sql.ErrNoRows {
-			//数据未找到
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w,"404文章未找到")
-		} else {
-			//数据库错误
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w,"500 服务器内部错误")
-		}
-	} else {
-		//读取成功，显示表单
-		fmt.Println("读取成功")
-		updateURL,_ := router.Get("articles.update").URL("id",id)
-		data := ArticlesFormData{
-			Title: article.Title,
-			Body: article.Body,
-			URL: updateURL,
-			Errors: nil,
-		}
-		tmpl,err := template.ParseFiles("resource/views/articles/edit.gohtml")
-		logger.LogError(err)
-		tmpl.Execute(w,data)
-	}
-
-}
-
-func articlesUpdateHandler(w http.ResponseWriter,r *http.Request) {
-	//获取文章ID
-	id := route.GetRouterVariable("id",r)
-
-	//获取文章
-	_,err := getArticleById(id)
-
-	//如果出现错误
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w,"404 文章未找到")
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w,"500 服务器内部错误")
-		}
-	} else {
-		//未出现错误
-		//验证表单
-		title := r.PostFormValue("title")
-		body := r.PostFormValue("body")
-
-		errors := validateArticleFormData(title,body)
-
-		if len(errors) == 0 {
-			//验证通过
-			query := "UPDATE articles SET title=?,body=? WHERE id=?"
-			rs, err := db.Exec(query, title, body, id)
-
-			if err != nil {
-				logger.LogError(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w,"500 服务器内部错误")
-			}
-
-			//更新成功，跳转到文章详情页
-			if n,_ := rs.RowsAffected();n > 0 {
-				showUrl ,_ := router.Get("articles.show").URL("id",id)
-				http.Redirect(w,r,showUrl.String(),http.StatusFound)
-			} else  {
-				fmt.Fprint(w,"没有做任何更改")
-			}
-		} else {
-			//表单验证不通过显示理由
-
-			updateURL,_ := router.Get("articles.update").URL("id",id)
-			data := ArticlesFormData{
-				Title: title,
-				Body: body,
-				URL: updateURL,
-				Errors: errors,
-			}
-
-			tmpl ,err := template.ParseFiles("resource/views/articles/edit.gohtml")
-
-			logger.LogError(err)
-			tmpl.Execute(w,data)
-		}
-
-	}
-}
-
 func articlesDeleteHandler(w http.ResponseWriter,r *http.Request) {
 	//获取id
 	id := route.GetRouterVariable("id", r)
@@ -282,8 +182,7 @@ func main()  {
 	router =  bootstrap.SetupRoute()
 
 
-	router.HandleFunc("/articles/{id:[0-9]+}/edit",articlesEditHandler).Methods("GET").Name("edit")
-	router.HandleFunc("/articles/{id:[0-9]+}",articlesUpdateHandler).Methods("POST").Name("articles.update")
+
 	router.HandleFunc("/articles/{id:[0-9]+}/delete",articlesDeleteHandler).Methods("POST").Name("articles.delete")
 
 	//中间件 强制内容类型为HTML

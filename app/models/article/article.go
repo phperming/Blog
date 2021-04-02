@@ -1,6 +1,7 @@
 package article
 
 import (
+	"Blog/pkg/logger"
 	"Blog/pkg/model"
 	"Blog/pkg/route"
 	"Blog/pkg/types"
@@ -31,6 +32,16 @@ func (article Article)Create() (err error) {
 	}
 
 	return nil
+}
+
+func (article Article)Update() (rowsAffected int64,err error) {
+	result := model.DB.Save(&article)
+	if err := result.Error; err != nil {
+		logger.LogError(err)
+		return 0,err
+	}
+
+	return result.RowsAffected,nil
 }
 
 func (a Article)Link() string {

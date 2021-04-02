@@ -13,6 +13,7 @@ type Article struct {
 	Body string
 }
 
+
 func Get(idstr string)(Article,error)  {
 	var article Article
 	id := types.StringToInt(idstr)
@@ -22,6 +23,14 @@ func Get(idstr string)(Article,error)  {
 	}
 
 	return article,nil
+}
+
+func (article Article)Create() (err error) {
+	if err := model.DB.Create(&article).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (a Article)Link() string {

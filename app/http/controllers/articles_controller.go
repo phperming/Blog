@@ -221,7 +221,7 @@ func (*ArticlesController)Update(w http.ResponseWriter,r *http.Request) {
 	}
 }
 
-func Delete(w http.ResponseWriter,r *http.Request) {
+func (*ArticlesController)Delete(w http.ResponseWriter,r *http.Request) {
 	//获取id
 	id := route.GetRouterVariable("id", r)
 

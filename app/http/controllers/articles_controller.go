@@ -221,6 +221,44 @@ func (*ArticlesController)Update(w http.ResponseWriter,r *http.Request) {
 	}
 }
 
+func Delete(w http.ResponseWriter,r *http.Request) {
+	//获取id
+	id := route.GetRouterVariable("id", r)
+
+	//读取对应的文章
+	_article, err := article.Get(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w,"404 文章未找到")
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w,"500 服务器内部错误")
+		}
+	} else {
+		//未出现错误，执行删除操作
+		rowsAffected,err := _article.Delete()
+
+		//如果发生错误
+		if err != nil {
+			//应该SQL报错了
+			logger.LogError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w,"500 服务器内部错误")
+		} else {
+			//未发生错误
+			if rowsAffected > 0 {
+				//重定向到列表页
+				indexURL := route.Name2URL("articles.index")
+				http.Redirect(w,r,indexURL,http.StatusFound)
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprint(w,"404 文章未找到")
+			}
+		}
+	}
+}
+
 func validateArticleFormData(title string,body string) map[string]string {
 	errors := make(map[string]string)
 

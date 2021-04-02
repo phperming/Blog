@@ -3,8 +3,6 @@ package main
 import (
 	"Blog/bootstrap"
 	"Blog/pkg/database"
-	"Blog/pkg/logger"
-	"Blog/pkg/route"
 	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -136,54 +134,12 @@ func validateArticleFormData(title string,body string) map[string]string {
 }
 
 
-func articlesDeleteHandler(w http.ResponseWriter,r *http.Request) {
-	//获取id
-	id := route.GetRouterVariable("id", r)
-
-	//读取对应的文章
-	article, err := getArticleById(id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w,"404 文章未找到")
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w,"500 服务器内部错误")
-		}
-	} else {
-		//未出现错误，执行删除操作
-		rowsAffected,err := article.Delete()
-
-		//如果发生错误
-		if err != nil {
-			//应该SQL报错了
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w,"500 服务器内部错误")
-		} else {
-			//未发生错误
-			if rowsAffected > 0 {
-				//重定向到列表页
-				indexURL ,_ := router.Get("articles.index").URL()
-				http.Redirect(w,r,indexURL.String(),http.StatusFound)
-			} else {
-				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprint(w,"404 文章未找到")
-			}
-		}
-	}
-}
-
 func main()  {
 	database.Initialize()
 	db = database.DB
 
 	bootstrap.SetupDB()
 	router =  bootstrap.SetupRoute()
-
-
-
-	router.HandleFunc("/articles/{id:[0-9]+}/delete",articlesDeleteHandler).Methods("POST").Name("articles.delete")
 
 	//中间件 强制内容类型为HTML
 	router.Use(forceHTMLMiddleware)

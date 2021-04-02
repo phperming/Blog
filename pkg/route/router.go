@@ -5,11 +5,14 @@ import (
 	"net/http"
 )
 
-var Router  *mux.Router
+var route  *mux.Router
 
+func SetRoute(r *mux.Router)  {
+	route = r
+}
 
 func Name2URL(routeName string,paris ...string) string{
-	url, err := Router.Get(routeName).URL(paris...)
+	url, err := route.Get(routeName).URL(paris...)
 
 	if err != nil {
 		return ""

@@ -2,11 +2,13 @@ package article
 
 import (
 	"Blog/pkg/model"
+	"Blog/pkg/route"
 	"Blog/pkg/types"
+	"strconv"
 )
 
 type Article struct {
-	ID int
+	ID int64
 	Title string
 	Body string
 }
@@ -20,4 +22,8 @@ func Get(idstr string)(Article,error)  {
 	}
 
 	return article,nil
+}
+
+func (a Article)Link() string {
+	return route.Name2URL("articles.show","id",strconv.FormatInt(a.ID,10))
 }

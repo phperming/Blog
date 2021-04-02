@@ -32,15 +32,7 @@ type Article struct {
 	ID int64
 }
 
-func (a Article)Link() string {
-	showURL, err := router.Get("articles.show").URL("id", strconv.FormatInt(a.ID,10))
-	if err != nil {
-		logger.LogError(err)
-		return ""
-	}
-	return showURL.String()
 
-}
 
 func (a Article)Delete() (rowsAffected int64,err error)  {
 	res, err := db.Exec("DELETE FROM articles WHERE id=" + strconv.FormatInt(a.ID, 10))
@@ -57,33 +49,6 @@ func (a Article)Delete() (rowsAffected int64,err error)  {
 }
 
 
-func articlesIndexHandler(w http.ResponseWriter,r *http.Request) {
-	//执行查询语句发布会一个结果集
-	rows, err := db.Query("SELECT * FROM articles")
-	logger.LogError(err)
-	defer rows.Close()
-
-	var articles []Article
-
-	//循环读取结果
-	for rows.Next() {
-		var article Article
-		err := rows.Scan(&article.ID, &article.Title, &article.Body)
-		logger.LogError(err)
-		//将article添加到articles中
-		articles = append(articles, article)
-	}
-
-	//检查遍历时是否发生错误
-	err = rows.Err()
-	logger.LogError(err)
-
-	//加载模板
-	tmpl, err := template.ParseFiles("resource/views/articles/index.gohtml")
-	logger.LogError(err)
-
-	tmpl.Execute(w,articles)
-}
 
 func articlesStoreHandler(w http.ResponseWriter,r *http.Request) {
 	title := r.PostFormValue("title")
@@ -362,7 +327,6 @@ func main()  {
 	bootstrap.SetupDB()
 	router =  bootstrap.SetupRoute()
 
-	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 	router.HandleFunc("/articles",articlesStoreHandler).Methods("POST").Name("articles.store")
 	router.HandleFunc("/articles/create",articlesCreateHandler).Methods("GET").Name("articles.create")
 	router.HandleFunc("/articles/{id:[0-9]+}/edit",articlesEditHandler).Methods("GET").Name("edit")

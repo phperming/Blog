@@ -1,15 +1,15 @@
 package article
 
 import (
+	"Blog/app/models"
 	"Blog/pkg/logger"
 	"Blog/pkg/model"
 	"Blog/pkg/route"
 	"Blog/pkg/types"
-	"strconv"
 )
 
 type Article struct {
-	ID int64
+	models.BaseModel
 	Title string
 	Body string
 }
@@ -55,5 +55,5 @@ func (article *Article)Delete() (rowsAffected int64,err error) {
 }
 
 func (a Article)Link() string {
-	return route.Name2URL("articles.show","id",strconv.FormatInt(a.ID,10))
+	return route.Name2URL("articles.show","id",a.GetStringID())
 }

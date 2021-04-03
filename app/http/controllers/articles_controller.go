@@ -4,13 +4,11 @@ import (
 	"Blog/app/models/article"
 	"Blog/pkg/logger"
 	"Blog/pkg/route"
-	"Blog/pkg/types"
+	"Blog/pkg/view"
 	"fmt"
 	"gorm.io/gorm"
 	"html/template"
 	"net/http"
-	"path/filepath"
-	"strconv"
 	"unicode/utf8"
 )
 
@@ -45,25 +43,8 @@ func (*ArticlesController)Show(w http.ResponseWriter,r *http.Request)  {
 		}
 	} else {
 		//文章读取成功，显示文章
-
-		//1.设置模板相对路径
-		viewDir := "resource/views"
-
-		//2.所有模板布局Slice
-		files, err := filepath.Glob(viewDir + "/layouts/*.gohtml")
-		logger.LogError(err)
-		//3.在Slice里新增我们的目标文件
-		newFiles := append(files,viewDir+"/articles/show.gohtml")
-		//4.解析模板文件
-		tmpl,err := template.New("show.gohtml").Funcs(template.FuncMap{
-			"RouteName2URL" : route.Name2URL,
-			"Int64ToString" : types.Int64ToString,
-		}).ParseFiles(newFiles...)
-		//tmpl, err := template.ParseFiles("resource/views/articles/show.gohtml")
-		logger.LogError(err)
-
-		//5.渲染模板，将文章数据传递进去
-		tmpl.ExecuteTemplate(w,"app",article)
+		fmt.Println("chenggong")
+		view.Render(w,"articles.show",article)
 	}
 }
 
@@ -74,19 +55,7 @@ func (*ArticlesController)Index(w http.ResponseWriter,r *http.Request)  {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w,"500 服务器内部错误")
 	} else {
-		//1.设置模板的相对路径
-		viewDir := "resource/views"
-		//2.所有布局模板文件的Slice
-		files, err := filepath.Glob(viewDir + "/layouts/*.gohtml")
-		logger.LogError(err)
-		//3.在Slice里新增我们的目标文件
-		newFiles := append(files,viewDir+"/articles/index.gohtml")
-		//4.解析模板文件
-		tmpl,err := template.ParseFiles(newFiles...)
-		logger.LogError(err)
-
-		//5。渲染模板，将所有文章数据传递进去
-		tmpl.ExecuteTemplate(w,"app",articles)
+		view.Render(w,"articles.index",articles)
 	}
 }
 
@@ -119,7 +88,7 @@ func (*ArticlesController)Store(w http.ResponseWriter,r *http.Request) {
 		_article.Create()
 		fmt.Println(_article)
 		if  _article.ID > 0 {
-			fmt.Println("出插入成功，ID为"+strconv.FormatInt(_article.ID,10))
+			fmt.Println("出插入成功，ID为"+_article.GetStringID())
 			showUrl := route.Name2URL("articles.index")
 			http.Redirect(w,r,showUrl,http.StatusFound)
 		} else {

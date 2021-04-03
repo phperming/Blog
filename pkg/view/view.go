@@ -9,8 +9,19 @@ import (
 	"strings"
 )
 
+type D map[string]interface{}
+
 //Render 渲染视图
 func Render(w io.Writer,data interface{},tplFiles...string)  {
+	RenderTemplate(w,"app",data,tplFiles...)
+}
+
+func RendSimple(w io.Writer,data interface{},tplFiles ...string)  {
+	RenderTemplate(w,"simple",data,tplFiles...)
+}
+
+//渲染视图
+func RenderTemplate(w io.Writer,name,data interface{},tplFiles ...string)  {
 	//1.设置模板的相对路径
 	viewDir := "resource/views/"
 	//2.语法糖，将 article.show 更正为 articles/show

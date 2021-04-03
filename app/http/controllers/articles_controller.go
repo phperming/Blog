@@ -16,13 +16,6 @@ type ArticlesController struct {
 
 }
 
-type ArticlesFormData struct {
-	Title string
-	Body string
-	Article article.Article
-	Errors map[string]string
-}
-
 
 func (*ArticlesController)Show(w http.ResponseWriter,r *http.Request)  {
 	//获取URL参数
@@ -60,7 +53,7 @@ func (*ArticlesController)Index(w http.ResponseWriter,r *http.Request)  {
 }
 
 func (*ArticlesController)Create(w http.ResponseWriter, r *http.Request) {
-	view.Render(w,ArticlesFormData{},"articles.create","articles._form_field")
+	view.Render(w,view.D{},"articles.create","articles._form_field")
 }
 
 func (*ArticlesController)Store(w http.ResponseWriter,r *http.Request) {
@@ -85,10 +78,10 @@ func (*ArticlesController)Store(w http.ResponseWriter,r *http.Request) {
 			fmt.Fprint(w,"创建文章失败，请联系管理员")
 		}
 	} else {
-		view.Render(w,ArticlesFormData{
-			Title: title,
-			Body: body,
-			Errors: errors,
+		view.Render(w,view.D{
+			"Title": title,
+			"Body": body,
+			"Errors": errors,
 		},"articles.create","articles._form_field")
 	}
 
@@ -116,11 +109,11 @@ func (*ArticlesController)Edit(w http.ResponseWriter,r *http.Request) {
 	} else {
 		//读取成功，显示表单
 		fmt.Println("读取成功")
-		view.Render(w,ArticlesFormData{
-			Title: _article.Title,
-			Body: _article.Body,
-			Article : _article,
-			Errors: nil,
+		view.Render(w,view.D{
+			"Title": _article.Title,
+			"Body": _article.Body,
+			"Article" : _article,
+			"Errors": nil,
 		},"articles.edit","articles._form_field")
 	}
 
@@ -173,11 +166,11 @@ func (*ArticlesController)Update(w http.ResponseWriter,r *http.Request) {
 		} else {
 			//表单验证不通过显示理由
 
-			data := ArticlesFormData{
-				Title: title,
-				Body: body,
-				Article: _article,
-				Errors: errors,
+			data := view.D{
+				"Title": title,
+				"Body": body,
+				"Article": _article,
+				"Errors": errors,
 			}
 
 			tmpl ,err := template.ParseFiles("resource/views/articles/edit.gohtml")

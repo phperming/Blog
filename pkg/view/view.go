@@ -10,20 +10,22 @@ import (
 )
 
 //Render 渲染视图
-func Render(w io.Writer,name string,data interface{})  {
+func Render(w io.Writer,data interface{},tplFiles...string)  {
 	//1.设置模板的相对路径
 	viewDir := "resource/views/"
 	//2.语法糖，将 article.show 更正为 articles/show
-	name = strings.Replace(name, ".", "/", -1)
+	for i,f := range tplFiles {
+		tplFiles[i] = viewDir + strings.Replace(f,".","/",-1) + ".gohtml"
+	}
 	//3.所有布局文件的Slice
-	files,err := filepath.Glob(viewDir+"/layouts/*.gohtml")
+	layoutFiles,err := filepath.Glob(viewDir+"/layouts/*.gohtml")
 	logger.LogError(err)
 	//4.在Slice里面增加我们的目标文件
-	newFiles := append(files,viewDir+name+".gohtml")
+	allFiles := append(layoutFiles,tplFiles...)
 	//5.解析所有的模板文件
-	tmpl, err := template.New(name + ".gohtml").Funcs(template.FuncMap{
+	tmpl, err := template.New("").Funcs(template.FuncMap{
 		"RouteName2URL": route.Name2URL,
-	}).ParseFiles(newFiles...)
+	}).ParseFiles(allFiles...)
 	logger.LogError(err)
 	//6.渲染模板
 	tmpl.ExecuteTemplate(w,"app",data)

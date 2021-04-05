@@ -1,9 +1,15 @@
 package models
 
-import "Blog/pkg/types"
+import (
+	"Blog/pkg/types"
+	"time"
+)
 
 type BaseModel struct {
-	ID uint64
+	ID uint64 `gorm:"column:id;primaryKey;autoIncrement;not null"`
+
+	CreatedAt time.Time `gorm:"column:created_at;index"`
+	UpdatedAt time.Time `gorm:"column:updated_at;index"`
 }
 
 //获取ID的字符串

@@ -3,6 +3,8 @@ package controllers
 import (
 	"Blog/app/models/user"
 	"Blog/app/requests"
+	"Blog/pkg/auth"
+	"Blog/pkg/session"
 	"Blog/pkg/view"
 	"fmt"
 	"net/http"
@@ -46,6 +48,32 @@ func (*AuthController)DoRegister(w http.ResponseWriter,r *http.Request)  {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w,"创建用户失败。请联系管理员")
 		}
+	}
+
+}
+
+func (*AuthController)Login(w http.ResponseWriter,r *http.Request)  {
+	session.Put("uid","1")
+	view.RendSimple(w,view.D{},"auth.login")
+}
+
+func (*AuthController)DoLogin(w http.ResponseWriter,r *http.Request)  {
+	//初始化表单数据
+	email := r.PostFormValue("email")
+	password := r.PostFormValue("password")
+
+	//尝试登录
+	if err := auth.Attempt(email,password); err == nil {
+		//登录成功
+		http.Redirect(w,r,"/",http.StatusFound)
+	} else {
+		//失败 显示错误信息
+		view.RendSimple(w,view.D{
+			"Error" : err.Error(),
+			"Email" : email,
+			"Password" : password,
+		},"auth.login")
+
 	}
 
 }

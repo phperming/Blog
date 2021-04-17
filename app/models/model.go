@@ -16,3 +16,4 @@ type BaseModel struct {
 func (a BaseModel) GetStringID() string {
 	return types.Uint64ToString(a.ID)
 }
+

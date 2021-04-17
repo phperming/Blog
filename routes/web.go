@@ -2,6 +2,7 @@ package routes
 
 import (
 	"Blog/app/http/controllers"
+	"Blog/app/http/middlewares"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -27,7 +28,8 @@ func RegisterWebRoutes(r *mux.Router)  {
 	auc := new(controllers.AuthController)
 	r.HandleFunc("/auth/register",auc.Register).Methods("GET").Name("auth.register")
 	r.HandleFunc("/auth/do-register",auc.DoRegister).Methods("POST").Name("auth.doregister")
-
+	r.HandleFunc("/auth/login",auc.Login).Methods("GET").Name("auth.login")
+	r.HandleFunc("/auth/dologin",auc.DoLogin).Methods("POST").Name("auth.dologin")
 
 
 
@@ -37,4 +39,5 @@ func RegisterWebRoutes(r *mux.Router)  {
 
 	//中间件，强制内容类型为HTML
 	//r.Use(middlewares.ForceHTML)
+	r.Use(middlewares.StartSession)
 }

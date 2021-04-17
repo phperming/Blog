@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"Blog/app/models/article"
+	"Blog/app/requests"
 	"Blog/pkg/logger"
 	"Blog/pkg/route"
 	"Blog/pkg/view"
@@ -61,18 +62,16 @@ func (*ArticlesController)Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (*ArticlesController)Store(w http.ResponseWriter,r *http.Request) {
-	title := r.PostFormValue("title")
-	body := r.PostFormValue("body")
-
-	errors := validateArticleFormData(title,body)
+	//初始化数据
+	_article := article.Article{
+		Title: r.PostFormValue("title"),
+		Body: r.PostFormValue("body"),
+	}
+	//表单验证
+	errors := requests.ValidateArticleForm(_article)
 	//检查是否有错误
 	if len(errors) == 0 {
-		_article := article.Article{
-			Title: title,
-			Body: body,
-		}
 		_article.Create()
-		fmt.Println(_article)
 		if  _article.ID > 0 {
 			fmt.Println("出插入成功，ID为"+_article.GetStringID())
 			showUrl := route.Name2URL("articles.index")
@@ -83,8 +82,7 @@ func (*ArticlesController)Store(w http.ResponseWriter,r *http.Request) {
 		}
 	} else {
 		view.Render(w,view.D{
-			"Title": title,
-			"Body": body,
+			"Article" : _article,
 			"Errors": errors,
 		},"articles.create","articles._form_field")
 	}
@@ -114,8 +112,6 @@ func (*ArticlesController)Edit(w http.ResponseWriter,r *http.Request) {
 		//读取成功，显示表单
 		fmt.Println("读取成功")
 		view.Render(w,view.D{
-			"Title": _article.Title,
-			"Body": _article.Body,
 			"Article" : _article,
 			"Errors": nil,
 		},"articles.edit","articles._form_field")
@@ -142,16 +138,13 @@ func (*ArticlesController)Update(w http.ResponseWriter,r *http.Request) {
 	} else {
 		//未出现错误
 		//验证表单
-		title := r.PostFormValue("title")
-		body := r.PostFormValue("body")
+		_article.Title = r.PostFormValue("title")
+		_article.Body = r.PostFormValue("body")
 
-		errors := validateArticleFormData(title,body)
+		errors := requests.ValidateArticleForm(_article)
 
 		if len(errors) == 0 {
 			//验证通过
-			_article.Title = title
-			_article.Body = body
-
 			rowsAffected,err := _article.Update()
 
 			if err != nil {
@@ -171,8 +164,6 @@ func (*ArticlesController)Update(w http.ResponseWriter,r *http.Request) {
 			//表单验证不通过显示理由
 
 			data := view.D{
-				"Title": title,
-				"Body": body,
 				"Article": _article,
 				"Errors": errors,
 			}

@@ -37,18 +37,22 @@ func (*ArticlesController)Show(w http.ResponseWriter,r *http.Request)  {
 	} else {
 		//文章读取成功，显示文章
 		fmt.Println("chenggong")
-		view.Render(w,article,"articles.show")
+		view.Render(w,view.D{
+			"Article" : article,
+		},"articles.show")
 	}
 }
 
 func (*ArticlesController)Index(w http.ResponseWriter,r *http.Request)  {
 	articles,err := article.GetAll()
-
+	//fmt.Println(articles)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w,"500 服务器内部错误")
 	} else {
-		view.Render(w,articles,"articles.index")
+		view.Render(w,view.D{
+			"Articles" : articles,
+		},"articles.index")
 	}
 }
 

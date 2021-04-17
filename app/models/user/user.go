@@ -33,7 +33,7 @@ func Get(uid string)  (User,error) {
 
 func GetByEmail(email string) (User,error) {
 	var user User
-	if err := model.DB.First(&user,email).Error; err != nil {
+	if err := model.DB.Where("email=?",email).First(&user).Error; err != nil {
 		return user,err
 	}
 

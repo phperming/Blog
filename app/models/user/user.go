@@ -4,6 +4,7 @@ import (
 	"Blog/app/models"
 	"Blog/pkg/model"
 	"Blog/pkg/types"
+	"Blog/pkg/password"
 )
 
 type User struct {
@@ -17,8 +18,8 @@ type User struct {
 }
 
 //对比密码是否匹配
-func (u User)ComparePassword(password string) bool  {
-	return u.Password == password
+func (u User)ComparePassword(_password string) bool  {
+	return  password.CheckHash(_password,u.Password)
 }
 
 func Get(uid string)  (User,error) {

@@ -3,6 +3,8 @@ package main
 import (
 	"Blog/app/http/middlewares"
 	"Blog/bootstrap"
+	"Blog/config"
+	c "Blog/pkg/config"
 	"Blog/pkg/database"
 	"database/sql"
 	"github.com/gorilla/mux"
@@ -12,6 +14,11 @@ import (
 var router *mux.Router
 var db *sql.DB
 
+func init()  {
+	//初始化配置信息
+	config.Initialize()
+}
+
 func main()  {
 	database.Initialize()
 	db = database.DB
@@ -19,5 +26,6 @@ func main()  {
 	bootstrap.SetupDB()
 	router =  bootstrap.SetupRoute()
 
-	http.ListenAndServe(":8088",middlewares.RemoveTrailingSlash(router))
+	http.ListenAndServe(":" + c.GetString("app.port") ,
+		middlewares.RemoveTrailingSlash(router))
 }

@@ -29,7 +29,6 @@ func createTables()  {
 func initDB()  {
 	var err error
 	config := mysql.Config{
-
 		User : "root",
 		Passwd : "root",
 		Addr: "127.0.0.1:3306",
